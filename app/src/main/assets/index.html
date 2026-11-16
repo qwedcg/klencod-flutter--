@@ -1,0 +1,297 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DAFAN AAI</title>
+
+<style>
+body {
+    margin:0;
+    background:#080d18;
+    color:white;
+    font-family:Arial,sans-serif;
+}
+header {
+    padding:22px;
+    background:#111d30;
+    text-align:center;
+    font-size:27px;
+    font-weight:bold;
+    color:#36dec5;
+}
+main {
+    padding:15px;
+    max-width:700px;
+    margin:auto;
+}
+.cells {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+.cell {
+    background:#14243a;
+    border:1px solid #29415e;
+    border-radius:12px;
+    padding:15px;
+    text-align:center;
+}
+.cell b {color:#36dec5}
+#output {
+    height:300px;
+    overflow:auto;
+    background:#101a2b;
+    padding:12px;
+    border-radius:12px;
+    margin-top:15px;
+    white-space:pre-wrap;
+}
+input {
+    width:65%;
+    padding:13px;
+    border:0;
+    border-radius:8px;
+    background:#1b2c43;
+    color:white;
+}
+button {
+    padding:13px;
+    border:0;
+    border-radius:8px;
+    background:#36dec5;
+    font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<header>DAFAN AAI</header>
+
+<main>
+
+<div class="cells">
+<div class="cell">⌨️<br><b>خلية الأوامر</b></div>
+<div class="cell">🧮<br><b>خلية الحساب</b></div>
+<div class="cell">📝<br><b>خلية الذاكرة</b></div>
+<div class="cell">🌐<br><b>خلية المواقع</b></div>
+<div class="cell">📱<br><b>خلية الجهاز</b></div>
+<div class="cell">🛡️<br><b>خلية الحماية</b></div>
+</div>
+
+<div id="output">DAFAN AAI جاهز.
+اكتب مساعدة لعرض الأوامر.</div>
+
+<br>
+
+<input id="command" placeholder="اكتب الأمر هنا">
+<button onclick="executeCommand()">تنفيذ</button>
+
+</main>
+
+<script>
+const output = document.getElementById("output");
+const command = document.getElementById("command");
+
+function print(text) {
+    output.textContent += "\n\n> " + text;
+    output.scrollTop = output.scrollHeight;
+}
+
+function calculate(expression) {
+    if (!/^[0-9+\-*/().%\s]+$/.test(expression))
+        return "عملية غير مسموحة.";
+
+    try {
+        const tokens = expression.match(
+            /(?:\d+(?:\.\d*)?|\.\d+|[()+\-*/%])/g
+        ) || [];
+
+        if (tokens.join("") !== expression.replace(/\s/g,""))
+            return "صيغة غير صحيحة.";
+
+        let p = 0;
+
+        function atom() {
+            const t = tokens[p++];
+
+            if (t === "+") return atom();
+            if (t === "-") return -atom();
+
+            if (t === "(") {
+                const v = sum();
+                if (tokens[p++] !== ")") throw Error();
+                return v;
+            }
+
+            if (!t || !/^(\d+\.?\d*|\.\d+)$/.test(t))
+                throw Error();
+
+            return Number(t);
+        }
+
+        function term() {
+            let v = atom();
+
+            while (["*","/","%"].includes(tokens[p])) {
+                const op = tokens[p++];
+                const b = atom();
+
+                if ((op === "/" || op === "%") && b === 0)
+                    throw Error();
+
+                v = op === "*" ? v*b :
+                    op === "/" ? v/b : v%b;
+            }
+
+            return v;
+        }
+
+        function sum() {
+            let v = term();
+
+            while (tokens[p] === "+" || tokens[p] === "-") {
+                const op = tokens[p++];
+                const b = term();
+                v = op === "+" ? v+b : v-b;
+            }
+
+            return v;
+        }
+
+        const result = sum();
+
+        if (p !== tokens.length || !Number.isFinite(result))
+            throw Error();
+
+        return result;
+
+    } catch {
+        return "تعذر إجراء الحساب.";
+    }
+}
+
+function executeCommand() {
+    const text = command.value.trim();
+    const cmd = text.toLowerCase();
+
+    if (!text) return;
+
+    print("الأمر: " + text);
+    command.value = "";
+
+    // خلية المساعدة
+    if (cmd === "مساعدة" || cmd === "help") {
+        print(
+            "الأوامر:\n" +
+            "الوقت\n" +
+            "التاريخ\n" +
+            "احسب 10+20\n" +
+            "احفظ ملاحظة مرحبا\n" +
+            "عرض الملاحظات\n" +
+            "احذف ملاحظة 1\n" +
+            "معلومات الجهاز\n" +
+            "افتح https://google.com"
+        );
+        return;
+    }
+
+    // خلية الوقت
+    if (cmd === "الوقت") {
+        print(new Date().toLocaleTimeString("ar-IQ"));
+        return;
+    }
+
+    // خلية التاريخ
+    if (cmd === "التاريخ") {
+        print(new Date().toLocaleDateString("ar-IQ"));
+        return;
+    }
+
+    // خلية الحساب
+    if (cmd.startsWith("احسب ")) {
+        print("الناتج: " + calculate(text.substring(5)));
+        return;
+    }
+
+    // خلية الذاكرة
+    if (text.startsWith("احفظ ملاحظة ")) {
+        const notes = JSON.parse(
+            localStorage.getItem("dafan_notes") || "[]"
+        );
+
+        notes.push(text.substring(12));
+        localStorage.setItem("dafan_notes",JSON.stringify(notes));
+
+        print("تم حفظ الملاحظة.");
+        return;
+    }
+
+    if (cmd === "عرض الملاحظات") {
+        const notes = JSON.parse(
+            localStorage.getItem("dafan_notes") || "[]"
+        );
+
+        print(notes.length ? notes.map(
+            (n,i)=>(i+1)+". "+n
+        ).join("\n") : "لا توجد ملاحظات.");
+
+        return;
+    }
+
+    if (text.startsWith("احذف ملاحظة ")) {
+        const n = Number(text.substring(12));
+        const notes = JSON.parse(
+            localStorage.getItem("dafan_notes") || "[]"
+        );
+
+        if (!Number.isInteger(n) || n < 1 || n > notes.length) {
+            print("رقم الملاحظة غير صحيح.");
+            return;
+        }
+
+        notes.splice(n-1,1);
+        localStorage.setItem("dafan_notes",JSON.stringify(notes));
+        print("تم حذف الملاحظة.");
+        return;
+    }
+
+    // خلية المواقع
+    if (text.startsWith("افتح ")) {
+        const url = text.substring(5).trim();
+
+        if (!/^https?:\/\/[^\s]+$/i.test(url)) {
+            print("اكتب رابطاً يبدأ بـ https:// أو http://");
+            return;
+        }
+
+        if (window.Dafan) {
+            window.Dafan.openUrl(url);
+            print("تم إرسال طلب فتح الرابط.");
+        } else {
+            print("فتح المواقع يحتاج تشغيل التطبيق على Android.");
+        }
+
+        return;
+    }
+
+    // خلية الجهاز
+    if (cmd === "معلومات الجهاز") {
+        print(window.Dafan ?
+            window.Dafan.deviceInfo() :
+            "معلومات الجهاز متاحة داخل تطبيق Android.");
+        return;
+    }
+
+    print("الأمر غير معروف. اكتب مساعدة.");
+}
+
+command.addEventListener("keydown",e=>{
+    if(e.key === "Enter") executeCommand();
+});
+</script>
+
+</body>
+</html>
